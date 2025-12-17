@@ -107,3 +107,70 @@ export const createProduct = asyncHandler(async (req, res) => {
     data: product,
   });
 });
+
+export const getProducts = asyncHandler(async (req, res) => {
+  const query = {
+    isActive: true,
+  };
+  // GET /api/products?q=iphone
+  if (req.query.q) {
+    const search = req.query.q.trim();
+    query.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { brand: { $regex: search, $options: "i" } },
+    ];
+  }
+  // GET /api/products?category=ID&brand=Apple&minPrice=50000&maxPrice=100000&page=3&limit=10&sort=brand:asc
+
+  if (req.query.category) {
+    if (!mongoose.isValidObjectId(req.query.category)) {
+      throw new ApiError(400, "Invalid category id");
+    }
+    query.category = req.query.category;
+  }
+  if (req.query.brand) {
+    query.brand = new RegExp(`^${req.query.brand}$`, "i");
+  }
+  if (req.query.minPrice || req.query.maxPrice) {
+    query.price = {};
+    if (req.query.minPrice) {
+      query.price.$gte = Number(req.query.minPrice);
+    }
+    if (req.query.maxPrice) {
+      query.price.$lte = Number(req.query.maxPrice);
+    }
+  }
+
+  // pagination
+  const page = Math.max(Math.ceil(Number(req.query.page)) || 1, 1);
+  const limit = Math.max(Math.ceil(Number(req.query.limit)) || 10, 1);
+  const skip = (page - 1) * limit;
+  const allowedSortFields = ["price", "createdAt", "name", "brand"];
+  let sort = {};
+  if (req.query.sort) {
+    const [field, sortingOrder] = req.query.sort.split(":");
+    if (allowedSortFields.includes(field)) {
+      if (sortingOrder === "asc" || sortingOrder === "desc") {
+        sort[field] = sortingOrder === "asc" ? 1 : -1;
+      }
+    }
+  } else {
+    sort = { createdAt: -1 };
+  }
+
+  const [total, products] = await Promise.all([
+    Product.countDocuments(query),
+    Product.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .populate("category", "name slug"),
+  ]);
+  res.status(200).json({
+    status: "success",
+    currentPage: page,
+    totalPages: Math.ceil(total / limit),
+    totalDocuments: total,
+    data: products,
+  });
+});
