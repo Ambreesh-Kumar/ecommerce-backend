@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const categorySchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true }, // category name
-    slug: { type: String, required: true, unique: true, lowercase: true }, // URL-friendly name
+    slug: { type: String, required: true, lowercase: true }, // URL-friendly name
     isActive: {
       type: Boolean,
       default: true
@@ -17,6 +17,6 @@ const categorySchema = new mongoose.Schema(
   { timestamps: true }
 ); // automatically adds createdAt & updatedAt
 
-categorySchema.index({slug: 1})
+categorySchema.index({slug: 1}, { unique: true })
 
 export const Category = mongoose.model("Category", categorySchema);

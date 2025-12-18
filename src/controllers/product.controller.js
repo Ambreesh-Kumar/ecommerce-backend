@@ -174,3 +174,21 @@ export const getProducts = asyncHandler(async (req, res) => {
     data: products,
   });
 });
+
+export const getProductById = asyncHandler(async (req, res) => {
+  const { idOrSlug } = req.params;
+  const query = { isActive: true };
+  // If ObjectId → search by _id
+  if (mongoose.isValidObjectId(idOrSlug)) {
+    query._id = idOrSlug;
+  } else {
+    // else treat it as slug
+    query.slug = idOrSlug.toLowerCase();
+  }
+  const product = await Product.findOne(query).populate(
+    "category",
+    "name slug"
+  );
+  if (!product) throw new ApiError(404, "product not found");
+  res.status(200).json({ status: "success", data: product });
+});
