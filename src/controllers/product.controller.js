@@ -68,7 +68,7 @@ export const createProduct = asyncHandler(async (req, res) => {
     }
   }
 
-  // 🔹 Upload images to Cloudinary
+  // Upload images to Cloudinary
   if (req.files?.length > 10) {
     throw new ApiError(400, "Maximum 10 images allowed");
   }
@@ -191,4 +191,139 @@ export const getProductById = asyncHandler(async (req, res) => {
   );
   if (!product) throw new ApiError(404, "product not found");
   res.status(200).json({ status: "success", data: product });
+});
+
+export const updateProduct = asyncHandler(async (req, res) => {
+  const { productId } = req.params;
+
+  if (!mongoose.isValidObjectId(productId)) {
+    throw new ApiError(400, "Invalid product id");
+  }
+
+  const product = await Product.findById(productId);
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  const {
+    name,
+    description,
+    price,
+    discountPrice,
+    brand,
+    stock,
+    category,
+    isActive,
+    attributes,
+  } = req.body;
+
+  // name + slug + duplicate check
+  if (name) {
+    const slug = slugify(name, { lower: true });
+    const existing = await Product.findOne({
+      slug,
+      category: category ?? product.category,
+      _id: { $ne: productId },
+    });
+
+    if (existing) {
+      throw new ApiError(400, "Product with this name already exists");
+    }
+
+    product.name = name;
+    product.slug = slug;
+  }
+
+  if (description) product.description = description;
+  if (brand) product.brand = brand;
+
+  // category update
+  if (category) {
+    if (!mongoose.isValidObjectId(category)) {
+      throw new ApiError(400, "Invalid category id");
+    }
+
+    const cat = await Category.findById(category);
+    if (!cat || !cat.isActive) {
+      throw new ApiError(400, "Category not found or inactive");
+    }
+
+    product.category = category;
+  }
+
+  // price
+  if (price !== undefined) {
+    if (Number(price) < 0) {
+      throw new ApiError(400, "Price must be positive");
+    }
+    product.price = Number(price);
+  }
+
+  // discountPrice (fixed logic)
+  if (discountPrice !== undefined) {
+    const finalPrice = price !== undefined ? Number(price) : product.price;
+
+    if (Number(discountPrice) < 0) {
+      throw new ApiError(400, "Discount price must be positive");
+    }
+
+    if (Number(discountPrice) >= finalPrice) {
+      throw new ApiError(400, "Discount price must be less than price");
+    }
+
+    product.discountPrice = Number(discountPrice);
+  }
+
+  // stock
+  if (stock !== undefined) {
+    if (Number(stock) < 0) {
+      throw new ApiError(400, "Stock must be positive");
+    }
+    product.stock = Number(stock);
+  }
+
+  // isActive
+  if (isActive !== undefined) {
+    product.isActive = Boolean(isActive);
+  }
+
+  // attributes
+  if (attributes) {
+    try {
+      product.attributes = JSON.parse(attributes);
+    } catch {
+      throw new ApiError(400, "Invalid attributes format");
+    }
+  }
+
+  if (req.files && req.files.length === 0) {
+    throw new ApiError(400, "At least one image is required");
+  }
+
+  if (req.files && req.files.length > 0) {
+    if (req.files.length > 10)
+      throw new ApiError(400, "Maximum 10 images allowed");
+    const uploadPromises = req.files.map((file) => {
+      return uploadToCloudinary(file.buffer, "products");
+    });
+    const uploadResults = await Promise.all(uploadPromises);
+    const newImages = uploadResults.map((result) => result.secure_url);
+    if (product.images && product.images.length > 0){
+      const deletePromises = product.images.map((imageUrl) => {
+        const parts = imageUrl.split("/");
+        const fileName = parts.pop();
+        const publicId = `products/${fileName.split(".")[0]}`;
+        return deleteFromCloudinary(publicId);
+      })
+      await Promise.all(deletePromises);
+    }
+  }
+
+  await product.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Product updated successfully",
+    data: product,
+  });
 });
