@@ -325,3 +325,33 @@ export const updateProduct = asyncHandler(async (req, res) => {
     data: product,
   });
 });
+
+export const deleteProduct = asyncHandler(async (req, res) => {
+  const { productId } = req.params;
+  if (!mongoose.isValidObjectId(productId))
+    throw new ApiError(400, "Invalid product id");
+  const product = await Product.findById(productId);
+  if (!product) throw new ApiError(404, "Product not found");
+  if (!product.isActive)
+    throw new ApiError(409, "This product is allready Inactive");
+
+  if (product.images && product.images.length > 0) {
+    const deletePromises = product.images.map((imageUrl) => {
+      const part = imageUrl.split("/");
+      const fileName = part.pop();
+      const publicId = `products/${fileName.split(".")[0]}`;
+      return deleteFromCloudinary(publicId);
+    });
+    await Promise.all(deletePromises);
+  }
+  product.isActive = false;
+  product.deletedAt = new Date();
+  product.deletedBy = req.user._id;
+
+  await product.save();
+  res.status(200).json({
+    status: "success",
+    message: "Product deleted successfully",
+    data: { productId: product._id },
+  });
+});
