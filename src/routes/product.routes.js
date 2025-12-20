@@ -8,6 +8,8 @@ import {
   getProductById,
   updateProduct,
   deleteProduct,
+  restoreProduct,
+  hardDeleteProduct
 } from "../controllers/product.controller.js";
 import { upload } from "../middlewares/multer.js";
 
@@ -21,6 +23,8 @@ router.use(auth, authorize(ROLES.ADMIN));
 // protected routes for admin
 router.post("/", upload.array("images", 10), createProduct);
 router.put("/:productId", upload.array("images", 10), updateProduct);
-router.patch("/:productId", deleteProduct);
+router.patch("/:productId", deleteProduct); // soft delete
+router.delete("/:productId/hard", hardDeleteProduct); // hard delete
+router.patch("/:productId/restore", restoreProduct); // restore
 
 export default router;

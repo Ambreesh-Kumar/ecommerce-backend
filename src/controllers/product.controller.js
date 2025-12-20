@@ -233,6 +233,10 @@ export const updateProduct = asyncHandler(async (req, res) => {
 
     product.name = name;
     product.slug = slug;
+    // Update SKU based on new name/slug
+    product.sku = `SKU-${Date.now()}-${Math.floor(
+      1000 + Math.random() * 9000
+    )}`;
   }
 
   if (description) product.description = description;
@@ -330,28 +334,76 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   const { productId } = req.params;
   if (!mongoose.isValidObjectId(productId))
     throw new ApiError(400, "Invalid product id");
-  const product = await Product.findById(productId);
-  if (!product) throw new ApiError(404, "Product not found");
-  if (!product.isActive)
-    throw new ApiError(409, "This product is allready Inactive");
-
-  if (product.images && product.images.length > 0) {
-    const deletePromises = product.images.map((imageUrl) => {
-      const part = imageUrl.split("/");
-      const fileName = part.pop();
-      const publicId = `products/${fileName.split(".")[0]}`;
-      return deleteFromCloudinary(publicId);
-    });
-    await Promise.all(deletePromises);
-  }
-  product.isActive = false;
-  product.deletedAt = new Date();
-  product.deletedBy = req.user._id;
-
-  await product.save();
+  const product = await Product.findOneAndUpdate(
+    { _id: productId, isActive: true },
+    {
+      $set: {
+        isActive: false,
+        deletedAt: new Date(),
+        deletedBy: req.user._id,
+      },
+    },
+    { new: true }
+  );
+  if (!product)
+    throw new ApiError(404, "Product not found or already inactive");
   res.status(200).json({
     status: "success",
     message: "Product deleted successfully",
     data: { productId: product._id },
   });
 });
+
+export const restoreProduct = asyncHandler(async (req, res) => {
+  const { productId } = req.params;
+  if (!mongoose.isValidObjectId(productId)) {
+    throw new ApiError(400, "Invalid product id");
+  }
+  const product = await Product.findOneAndUpdate(
+    { _id: productId, isActive: false },
+    { $set: { isActive: true, deletedAt: null, deletedBy: null } },
+    { new: true }
+  );
+  if (!product) throw new ApiError(404, "Product not found or already active");
+
+  res.status(200).json({
+    status: "success",
+    message: "Product restored successfully",
+    data: product,
+  });
+});
+
+export const hardDeleteProduct = asyncHandler(async (req, res) => {
+  const { productId } = req.params;
+
+  if (!mongoose.isValidObjectId(productId)) {
+    throw new ApiError(400, "Invalid product id");
+  }
+
+  const product = await Product.findById(productId);
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  // Delete images from Cloudinary (permanent)
+  if (product.images && product.images.length > 0) {
+    const deletePromises = product.images.map((imageUrl) => {
+      const parts = imageUrl.split("/");
+      const fileName = parts.pop();
+      const publicId = `products/${fileName.split(".")[0]}`;
+      return deleteFromCloudinary(publicId);
+    });
+
+    await Promise.all(deletePromises);
+  }
+
+  //  Permanent DB delete
+  await product.deleteOne();
+
+  res.status(200).json({
+    status: "success",
+    message: "Product permanently deleted",
+    data: { productId },
+  });
+});
+

@@ -17,6 +17,8 @@ const productSchema = new mongoose.Schema(
     images: [String], // multiple images
     attributes: { type: mongoose.Schema.Types.Mixed }, // optional dynamic fields
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );
