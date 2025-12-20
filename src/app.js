@@ -4,7 +4,8 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import categoryRoutes from "./routes/category.routes.js";
-import productRoutes from "./routes/product.routes.js"
+import productRoutes from "./routes/product.routes.js";
+import cartRoutes from "./routes/cart.routes.js";
 
 const app = express();
 
@@ -26,7 +27,8 @@ app.use(
 // routes
 app.use("/api/auth/", authRoutes);
 app.use("/api/categories", categoryRoutes);
-app.use("/api/products/", productRoutes)
+app.use("/api/products/", productRoutes);
+app.use("/api/cart", cartRoutes);
 
 // global error handler at last after all routes
 app.use(errorHandler);
