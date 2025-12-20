@@ -5,6 +5,7 @@ import { Category } from "../models/Category.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
+import { deleteFromCloudinary } from "../utils/deleteCloudinaryPhotos.js";
 
 export const createProduct = asyncHandler(async (req, res) => {
   const {
@@ -296,10 +297,6 @@ export const updateProduct = asyncHandler(async (req, res) => {
     }
   }
 
-  if (req.files && req.files.length === 0) {
-    throw new ApiError(400, "At least one image is required");
-  }
-
   if (req.files && req.files.length > 0) {
     if (req.files.length > 10)
       throw new ApiError(400, "Maximum 10 images allowed");
@@ -308,15 +305,16 @@ export const updateProduct = asyncHandler(async (req, res) => {
     });
     const uploadResults = await Promise.all(uploadPromises);
     const newImages = uploadResults.map((result) => result.secure_url);
-    if (product.images && product.images.length > 0){
+    if (product.images && product.images.length > 0) {
       const deletePromises = product.images.map((imageUrl) => {
         const parts = imageUrl.split("/");
         const fileName = parts.pop();
         const publicId = `products/${fileName.split(".")[0]}`;
         return deleteFromCloudinary(publicId);
-      })
+      });
       await Promise.all(deletePromises);
     }
+    product.images = newImages;
   }
 
   await product.save();
