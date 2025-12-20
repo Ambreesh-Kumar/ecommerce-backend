@@ -95,3 +95,58 @@ export const addToCart = asyncHandler(async (req, res) => {
     data: cart,
   });
 });
+
+export const updateCartItem = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { productId, quantity } = req.body;
+
+  if (!mongoose.isValidObjectId(productId)) {
+    throw new ApiError(400, "Invalid product id");
+  }
+
+  if (quantity < 1) {
+    throw new ApiError(400, "Quantity must be at least 1");
+  }
+
+  // Check if product exists and active
+  const product = await Product.findOne({
+    _id: productId,
+    isActive: true,
+  });
+
+  if (!product) {
+    throw new ApiError(404, "Product not found or inactive");
+  }
+
+  if (quantity > product.stock) {
+    throw new ApiError(400, "Requested quantity exceeds available stock");
+  }
+
+  // Find active cart
+  const cart = await Cart.findOne({ user: userId, isActive: true });
+
+  if (!cart || cart.items.length === 0) {
+    throw new ApiError(404, "Cart is empty");
+  }
+
+  // Find the cart item
+  const cartItem = cart.items.find(
+    (item) => item.product.toString() === productId.toString()
+  );
+
+  if (!cartItem) {
+    throw new ApiError(404, "Product not found in cart");
+  }
+
+  // Update quantity
+  cartItem.quantity = Number(quantity);
+
+  await cart.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Cart item quantity updated",
+    data: cart,
+  });
+});
+

@@ -1,5 +1,9 @@
 import express from "express";
-import { getMyCart, addToCart } from "../controllers/cart.controller.js";
+import {
+  getMyCart,
+  addToCart,
+  updateCartItem,
+} from "../controllers/cart.controller.js";
 import { auth } from "../middlewares/auth.js";
 
 const router = express.Router();
@@ -12,5 +16,8 @@ router.get("/", getMyCart);
 
 // ADD item to cart
 router.post("/add", addToCart);
+
+// UPDATE item quantity
+router.put("/update", updateCartItem);
 
 export default router;
