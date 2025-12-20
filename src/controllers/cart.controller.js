@@ -150,3 +150,69 @@ export const updateCartItem = asyncHandler(async (req, res) => {
   });
 });
 
+export const removeCartItem = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { productId } = req.body;
+
+  if (!mongoose.isValidObjectId(productId)) {
+    throw new ApiError(400, "Invalid product id");
+  }
+
+  // Find active cart
+  const cart = await Cart.findOne({ user: userId, isActive: true });
+
+  if (!cart || cart.items.length === 0) {
+    throw new ApiError(404, "Cart is empty");
+  }
+
+  // Check if product exists in cart
+  const itemIndex = cart.items.findIndex(
+    (item) => item.product.toString() === productId.toString()
+  );
+
+  if (itemIndex === -1) {
+    throw new ApiError(404, "Product not found in cart");
+  }
+
+  // Remove item
+  cart.items.splice(itemIndex, 1);
+
+  // If cart is now empty, mark it inactive
+  if (cart.items.length === 0) {
+    cart.isActive = false;
+  }
+
+  await cart.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Product removed from cart",
+    data: cart,
+  });
+});
+
+export const clearCart = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const cart = await Cart.findOne({ user: userId, isActive: true });
+
+  if (!cart || cart.items.length === 0) {
+    throw new ApiError(404, "Cart is already empty");
+  }
+
+  // Clear all items
+  cart.items = [];
+  cart.isActive = false; // mark inactive since empty
+  cart.totalItems = 0;
+  cart.totalPrice = 0;
+  cart.discountAmount = 0;
+
+  await cart.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Cart cleared successfully",
+    data: cart,
+  });
+});
+
