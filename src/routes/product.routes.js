@@ -7,6 +7,7 @@ import {
   getProducts,
   getProductById,
   updateProduct,
+  deleteProduct,
 } from "../controllers/product.controller.js";
 import { upload } from "../middlewares/multer.js";
 
@@ -19,6 +20,7 @@ router.get("/:idOrSlug", getProductById);
 router.use(auth, authorize(ROLES.ADMIN));
 // protected routes for admin
 router.post("/", upload.array("images", 10), createProduct);
-router.post("/:productId", updateProduct);
+router.put("/:productId", upload.array("images", 10), updateProduct);
+router.patch("/:productId", deleteProduct);
 
 export default router;
