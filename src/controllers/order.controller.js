@@ -225,3 +225,77 @@ export const cancelMyOrder = asyncHandler(async (req, res) => {
     data: { orderId: order._id },
   });
 });
+
+// ADMIN ORDER CONTROLLERS
+export const getAllOrders = asyncHandler(async (req, res) => {
+  let {
+    page = 1,
+    limit = 10,
+    orderStatus,
+    paymentStatus,
+    user,
+    sort = "-createdAt",
+  } = req.query;
+
+  page = Math.max(Number(page), 1);
+  limit = Math.min(Math.max(Number(limit), 1), 50); // max 50 per page
+
+  const query = {};
+
+  // Validate orderStatus
+  const allowedOrderStatus = [
+    "placed",
+    "confirmed",
+    "shipped",
+    "delivered",
+    "cancelled",
+  ];
+  if (orderStatus) {
+    if (!allowedOrderStatus.includes(orderStatus)) {
+      throw new ApiError(400, "Invalid order status");
+    }
+    query.orderStatus = orderStatus;
+  }
+
+  // Validate paymentStatus
+  const allowedPaymentStatus = [
+    "pending",
+    "paid",
+    "failed",
+    "refunded",
+  ];
+  if (paymentStatus) {
+    if (!allowedPaymentStatus.includes(paymentStatus)) {
+      throw new ApiError(400, "Invalid payment status");
+    }
+    query.paymentStatus = paymentStatus;
+  }
+
+  if (user && mongoose.isValidObjectId(user)) {
+    query.user = user;
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [orders, total] = await Promise.all([
+    Order.find(query)
+      .populate("user", "name email")
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Order.countDocuments(query),
+  ]);
+
+  res.status(200).json({
+    status: "success",
+    data: orders,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
+});
+
