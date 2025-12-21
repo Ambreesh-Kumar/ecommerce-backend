@@ -154,3 +154,56 @@ export const getMyOrderById = asyncHandler(async (req, res) => {
     data: order,
   });
 });
+
+export const cancelMyOrder = asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+  const userId = req.user._id;
+
+  if (!mongoose.isValidObjectId(orderId)) {
+    throw new ApiError(400, "Invalid order id");
+  }
+
+  const order = await Order.findOne({
+    _id: orderId,
+    user: userId,
+    isActive: true,
+  });
+
+  if (!order) {
+    throw new ApiError(404, "Order not found");
+  }
+
+  // Disallow cancellation after shipping
+  if (["shipped", "delivered", "cancelled"].includes(order.orderStatus)) {
+    throw new ApiError(409, "Order cannot be cancelled at this stage");
+  }
+
+  if (order.orderStatus === "cancelled") {
+    throw new ApiError(409, "Order already cancelled");
+  }
+
+  // Restore stock
+  await Promise.all(
+    order.items.map((item) =>
+      Product.findByIdAndUpdate(item.product, {
+        $inc: { stock: item.quantity },
+      })
+    )
+  );
+
+  order.orderStatus = "cancelled";
+  if (order.paymentMethod === "ONLINE") {
+    order.paymentStatus = "refunded";
+  }
+  order.cancelledAt = new Date();
+  order.cancelledBy = userId;
+  order.isActive = false;
+
+  await order.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Order cancelled successfully",
+    data: { orderId: order._id },
+  });
+});

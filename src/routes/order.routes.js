@@ -4,6 +4,7 @@ import {
   createOrderFromCart,
   getMyOrders,
   getMyOrderById,
+  cancelMyOrder
 } from "../controllers/order.controller.js";
 
 const router = express.Router();
@@ -17,5 +18,8 @@ router.post("/create", createOrderFromCart);
 router.get("/my", getMyOrders);
 // Get single order
 router.get("/:orderId", getMyOrderById);
+
+// Cancel my order
+router.patch("/:orderId/cancel", cancelMyOrder);
 
 export default router;
