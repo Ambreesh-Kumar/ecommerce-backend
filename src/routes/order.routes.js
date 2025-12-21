@@ -3,6 +3,7 @@ import { auth } from "../middlewares/auth.js";
 import {
   createOrderFromCart,
   getMyOrders,
+  getMyOrderById,
 } from "../controllers/order.controller.js";
 
 const router = express.Router();
@@ -14,5 +15,7 @@ router.use(auth);
 router.post("/create", createOrderFromCart);
 // Get my orders
 router.get("/my", getMyOrders);
+// Get single order
+router.get("/:orderId", getMyOrderById);
 
 export default router;

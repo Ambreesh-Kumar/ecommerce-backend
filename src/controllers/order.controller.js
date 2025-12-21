@@ -130,3 +130,27 @@ export const getMyOrders = asyncHandler(async (req, res) => {
     data: orders,
   });
 });
+
+export const getMyOrderById = asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+  const userId = req.user._id;
+
+  if (!mongoose.isValidObjectId(orderId)) {
+    throw new ApiError(400, "Invalid order id");
+  }
+
+  const order = await Order.findOne({
+    _id: orderId,
+    user: userId,
+    isActive: true,
+  }).lean();
+
+  if (!order) {
+    throw new ApiError(404, "Order not found");
+  }
+
+  res.status(200).json({
+    status: "success",
+    data: order,
+  });
+});
