@@ -7,6 +7,7 @@ import {
   getMyOrderById,
   cancelMyOrder,
   getAllOrders,
+  adminGetOrderById
 } from "../controllers/order.controller.js";
 import { ROLES } from "../constants/roles.js";
 
@@ -27,6 +28,8 @@ router.patch("/:orderId/cancel", cancelMyOrder);
 
 // ADMIN ROUTES
 router.use(authorize(ROLES.ADMIN));
+
 router.get("/", getAllOrders);
+router.get("/admin/:orderId", adminGetOrderById)
 
 export default router;

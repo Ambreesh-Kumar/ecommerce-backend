@@ -299,3 +299,26 @@ export const getAllOrders = asyncHandler(async (req, res) => {
   });
 });
 
+export const adminGetOrderById = asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+
+  if (!mongoose.isValidObjectId(orderId)) {
+    throw new ApiError(400, "Invalid order id");
+  }
+
+  const order = await Order.findById(orderId)
+    .populate("user", "name email")
+    .populate("items.product", "name images")
+    .lean();
+
+  if (!order) {
+    throw new ApiError(404, "Order not found");
+  }
+
+  res.status(200).json({
+    status: "success",
+    data: order,
+  });
+});
+
+
