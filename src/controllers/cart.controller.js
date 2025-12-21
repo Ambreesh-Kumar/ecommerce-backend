@@ -1,11 +1,8 @@
 import mongoose from "mongoose";
 import { Product } from "../models/Product.js";
-import { Category } from "../models/Category.js";
 import { Cart } from "../models/cart.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
-import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
-import { deleteFromCloudinary } from "../utils/deleteCloudinaryPhotos.js";
 
 export const getMyCart = asyncHandler(async (req, res) => {
   const userId = req.user._id;
