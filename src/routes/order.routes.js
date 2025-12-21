@@ -1,6 +1,9 @@
 import express from "express";
-import { auth} from "../middlewares/auth.js";
-import { createOrderFromCart } from "../controllers/order.controller.js";
+import { auth } from "../middlewares/auth.js";
+import {
+  createOrderFromCart,
+  getMyOrders,
+} from "../controllers/order.controller.js";
 
 const router = express.Router();
 
@@ -9,5 +12,7 @@ router.use(auth);
 
 // Create order from cart
 router.post("/create", createOrderFromCart);
+// Get my orders
+router.get("/my", getMyOrders);
 
 export default router;

@@ -53,10 +53,7 @@ export const createOrderFromCart = asyncHandler(async (req, res) => {
     }
 
     if (item.quantity > product.stock) {
-      throw new ApiError(
-        400,
-        `Insufficient stock for ${item.productName}`
-      );
+      throw new ApiError(400, `Insufficient stock for ${item.productName}`);
     }
 
     const itemSubtotal = item.price * item.quantity;
@@ -114,3 +111,22 @@ export const createOrderFromCart = asyncHandler(async (req, res) => {
   });
 });
 
+export const getMyOrders = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const orders = await Order.find({ user: userId, isActive: true })
+    .sort({ createdAt: -1 })
+    .lean(); // Give me plain JavaScript objects, NOT full Mongoose documents. improve performance
+
+  if (!orders || orders.length === 0) {
+    return res.status(200).json({
+      status: "success",
+      data: [],
+    });
+  }
+
+  res.status(200).json({
+    status: "success",
+    data: orders,
+  });
+});
