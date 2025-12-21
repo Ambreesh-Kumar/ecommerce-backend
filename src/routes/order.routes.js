@@ -7,7 +7,8 @@ import {
   getMyOrderById,
   cancelMyOrder,
   getAllOrders,
-  adminGetOrderById
+  adminGetOrderById,
+  adminUpdateOrderStatus
 } from "../controllers/order.controller.js";
 import { ROLES } from "../constants/roles.js";
 
@@ -30,6 +31,7 @@ router.patch("/:orderId/cancel", cancelMyOrder);
 router.use(authorize(ROLES.ADMIN));
 
 router.get("/", getAllOrders);
-router.get("/admin/:orderId", adminGetOrderById)
+router.get("/admin/:orderId", adminGetOrderById);
+router.patch("/admin/:orderId", adminUpdateOrderStatus);
 
 export default router;
