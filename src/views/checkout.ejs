@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Checkout</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f9f9f9;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+      .checkout-card {
+        background: #fff;
+        padding: 40px 60px;
+        border-radius: 15px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        text-align: center;
+      }
+      h2 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+      p {
+        color: #555;
+        margin-bottom: 30px;
+      }
+      button.pay-btn {
+        background: linear-gradient(90deg, #ff416c, #ff4b2b);
+        border: none;
+        color: white;
+        padding: 15px 40px;
+        font-size: 18px;
+        font-weight: bold;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      button.pay-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="checkout-card">
+      <h2>Order Payment</h2>
+      <p>Amount to pay: ₹<%= (amount / 100).toFixed(2) %></p>
+      <button id="payBtn" class="pay-btn">Pay Now</button>
+    </div>
+
+    <script>
+      const options = {
+        key: "<%= keyId %>",
+        amount: Number(<%= amount %>), // amount in paise
+        currency: "<%= currency %>",
+        name: "My E-Commerce",
+        description: "Order Payment",
+        order_id: "<%= razorpayOrderId %>",
+        handler: function (response) {
+          const payload = {
+            paymentId: "<%= paymentId %>",
+            orderId: "<%= orderId %>",
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+          };
+
+          fetch("/api/payments/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          })
+            .then(() => {
+              window.location.href = "/payment-success";
+            })
+            .catch(() => {
+              window.location.href = "/payment-failed";
+            });
+        },
+        prefill: {
+          name: "<%= user.name %>",
+          email: "<%= user.email %>",
+        },
+        theme: { color: "#ff416c" },
+        modal: {
+          ondismiss: function () {
+            window.location.href = "/payment-cancelled";
+          },
+        },
+      };
+
+      const rzp = new Razorpay(options);
+
+      // Only open modal on button click
+      document.getElementById("payBtn").addEventListener("click", function () {
+        rzp.open();
+      });
+    </script>
+  </body>
+</html>

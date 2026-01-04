@@ -53,7 +53,7 @@ export const addToCart = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Requested quantity exceeds available stock");
   }
 
-  let cart = await Cart.findOne({ user: userId, isActive: true });
+  let cart = await Cart.findOne({ user: userId });
 
   // Create cart if not exists
   if (!cart) {
@@ -61,6 +61,11 @@ export const addToCart = asyncHandler(async (req, res) => {
       user: userId,
       items: [],
     });
+  }
+
+  // If cart exists but inactive, reactivate it
+  if (!cart.isActive) {
+    cart.isActive = true;
   }
 
   // Check if product already in cart
@@ -212,4 +217,3 @@ export const clearCart = asyncHandler(async (req, res) => {
     data: cart,
   });
 });
-

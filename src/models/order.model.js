@@ -124,9 +124,8 @@ const orderSchema = new mongoose.Schema(
 
 orderSchema.index({ user: 1, createdAt: -1 });
 
-orderSchema.pre("save", function (next) {
+orderSchema.pre("save", async function () {
   this.totalItems = this.items.reduce((sum, item) => sum + item.quantity, 0);
-  next();
 });
 
 export const Order = mongoose.model("Order", orderSchema);

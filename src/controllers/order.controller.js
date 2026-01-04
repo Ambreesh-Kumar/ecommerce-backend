@@ -56,10 +56,7 @@ export const createOrderFromCart = asyncHandler(async (req, res) => {
       }
 
       if (item.quantity > product.stock) {
-        throw new ApiError(
-          400,
-          `Insufficient stock for ${item.productName}`
-        );
+        throw new ApiError(400, `Insufficient stock for ${item.productName}`);
       }
 
       const itemSubtotal = item.price * item.quantity;
@@ -76,11 +73,13 @@ export const createOrderFromCart = asyncHandler(async (req, res) => {
       subtotal += itemSubtotal;
       totalItems += item.quantity;
 
-      await Product.updateOne(
-        { _id: product._id },
-        { $inc: { stock: -item.quantity } },
-        { session }
-      );
+      if (paymentMethod === "COD") {
+        await Product.updateOne(
+          { _id: product._id },
+          { $inc: { stock: -item.quantity } },
+          { session }
+        );
+      }
     }
 
     const discount = cart.discount || 0;
@@ -102,6 +101,7 @@ export const createOrderFromCart = asyncHandler(async (req, res) => {
           discount,
           discountAmount,
           paymentMethod,
+          paymentStatus: "pending",
           shippingAddress,
           orderNumber,
         },
@@ -118,7 +118,10 @@ export const createOrderFromCart = asyncHandler(async (req, res) => {
 
     res.status(201).json({
       status: "success",
-      message: "Order placed successfully",
+      message:
+        paymentMethod === "ONLINE"
+          ? "Order created. Proceed to payment."
+          : "Order placed successfully",
       data: order[0],
     });
   } catch (error) {
@@ -127,7 +130,6 @@ export const createOrderFromCart = asyncHandler(async (req, res) => {
     throw error;
   }
 });
-
 
 export const getMyOrders = asyncHandler(async (req, res) => {
   const userId = req.user._id;
@@ -258,12 +260,7 @@ export const getAllOrders = asyncHandler(async (req, res) => {
   }
 
   // Validate paymentStatus
-  const allowedPaymentStatus = [
-    "pending",
-    "paid",
-    "failed",
-    "refunded",
-  ];
+  const allowedPaymentStatus = ["pending", "paid", "failed", "refunded"];
   if (paymentStatus) {
     if (!allowedPaymentStatus.includes(paymentStatus)) {
       throw new ApiError(400, "Invalid payment status");
@@ -321,7 +318,6 @@ export const adminGetOrderById = asyncHandler(async (req, res) => {
   });
 });
 
-
 export const adminUpdateOrderStatus = asyncHandler(async (req, res) => {
   const { orderId } = req.params;
   const { orderStatus, paymentStatus } = req.body;
@@ -331,7 +327,13 @@ export const adminUpdateOrderStatus = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid order id");
   }
 
-  const allowedOrderStatus = ["placed", "confirmed", "shipped", "delivered", "cancelled"];
+  const allowedOrderStatus = [
+    "placed",
+    "confirmed",
+    "shipped",
+    "delivered",
+    "cancelled",
+  ];
   const allowedPaymentStatus = ["pending", "paid", "failed", "refunded"];
 
   if (orderStatus && !allowedOrderStatus.includes(orderStatus)) {
@@ -353,7 +355,9 @@ export const adminUpdateOrderStatus = asyncHandler(async (req, res) => {
     // Restore stock
     await Promise.all(
       order.items.map((item) =>
-        Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } })
+        Product.findByIdAndUpdate(item.product, {
+          $inc: { stock: item.quantity },
+        })
       )
     );
 

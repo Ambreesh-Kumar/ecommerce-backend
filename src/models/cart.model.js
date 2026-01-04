@@ -71,7 +71,7 @@ const cartSchema = new mongoose.Schema(
 cartSchema.index({ user: 1 });
 
 // Pre-save hook to calculate totals
-cartSchema.pre("save", function (next) {
+cartSchema.pre("save", async function () {
   let totalItems = 0;
   let totalPrice = 0;
 
@@ -89,8 +89,6 @@ cartSchema.pre("save", function (next) {
   this.discountAmount = (totalPrice * this.discount) / 100;
   const afterDiscount = totalPrice - this.discountAmount;
   this.totalPrice = Math.max(0, afterDiscount);
-
-  next();
 });
 
 export const Cart = mongoose.model("Cart", cartSchema);
