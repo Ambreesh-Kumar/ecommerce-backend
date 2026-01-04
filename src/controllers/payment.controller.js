@@ -3,6 +3,7 @@ import { User } from "../models/User.js";
 import { Order } from "../models/order.model.js";
 import { Payment } from "../models/Payment.js";
 import { createRazorpayOrder } from "../services/razorpay.service.js";
+import { verifyRazorpaySignature } from "../services/razorpay.service.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { verifyAccessToken } from "../utils/jwt.js";
@@ -33,7 +34,6 @@ export const createCheckout = asyncHandler(async (req, res) => {
     _id: orderId,
     user: userId,
     paymentMethod: "ONLINE",
-    paymentStatus: "pending",
     isActive: true,
   });
 
@@ -43,6 +43,20 @@ export const createCheckout = asyncHandler(async (req, res) => {
       "Order not found or not eligible for online payment"
     );
   }
+
+  // Prevent double payment
+ if (order.paymentStatus === "paid") {
+  return res.status(400).render("payment-already-paid", {
+    orderId: order._id,
+    message: "This order has already been paid",
+  });
+}
+
+// Not eligible for payment
+if (order.paymentStatus !== "pending") {
+  throw new ApiError(400, "Order not eligible for payment");
+}
+
   const existingPayment = await Payment.findOne({
     order: order._id,
     status: "created",
@@ -92,5 +106,76 @@ export const createCheckout = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
     },
+  });
+});
+
+export const verifyPayment = asyncHandler(async (req, res) => {
+  const {
+    paymentId,
+    orderId,
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+  } = req.body;
+
+  // Validate payload
+  if (
+    !paymentId ||
+    !orderId ||
+    !razorpay_order_id ||
+    !razorpay_payment_id ||
+    !razorpay_signature
+  ) {
+    throw new ApiError(400, "Incomplete payment details");
+  }
+
+  // Fetch payment
+  const payment = await Payment.findById(paymentId);
+  if (!payment) {
+    throw new ApiError(404, "Payment record not found");
+  }
+
+  // Idempotency check
+  if (payment.status === "paid") {
+    return res.status(200).json({
+      status: "success",
+      message: "Payment already verified",
+    });
+  }
+
+  // Verify Razorpay signature
+  const isValid = verifyRazorpaySignature({
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+  });
+
+  if (!isValid) {
+    payment.status = "failed";
+    await payment.save();
+
+    throw new ApiError(400, "Invalid payment signature");
+  }
+
+  // Update payment
+  payment.status = "paid";
+  payment.razorpayPaymentId = razorpay_payment_id;
+  payment.razorpaySignature = razorpay_signature;
+  await payment.save();
+
+  // Update order
+  const order = await Order.findById(orderId);
+  if (!order) {
+    throw new ApiError(404, "Order not found");
+  }
+
+  order.paymentStatus = "paid";
+  order.orderStatus = "confirmed";
+  await order.save();
+
+  // Success
+  return res.status(200).json({
+    status: "success",
+    message: "Payment verified and order confirmed",
   });
 });
