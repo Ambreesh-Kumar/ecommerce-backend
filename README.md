@@ -178,8 +178,7 @@ Cloudinary (Media) / Razorpay (Payments)
 ### 🧪 Razorpay Test Card Details
 | Card Number         | Expiry     | CVV |
 | ------------------- | ---------- | --- |
-| 4111 1111 1111 1111 | Any future | 111 |
-| 5424 1234 5678 9012 | Any future | 123 |
+| 5267 3181 8797 5449 | Any future | 123 |
 
 ### 🖼️ Media Upload System
 * Multer for file handling
