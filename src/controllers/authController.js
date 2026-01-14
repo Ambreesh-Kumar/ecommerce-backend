@@ -12,7 +12,7 @@ const isProduction = process.env.NODE_ENV === "production";
 const cookieOptions = {
   httpOnly: true,
   secure: isProduction, // set true in production (https)
-  sameSite: "lax", // adjust if frontend on different domain
+  sameSite: isProduction ? "none" : "lax", // adjust if frontend on different domain
   path: "/", // cookie path
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms - must match REFRESH_TOKEN_EXP
 };
