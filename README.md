@@ -3,7 +3,7 @@ A **production-grade E-Commerce Backend** built using **Node.js, Express, and Mo
 
 ## 🌐 API Base URL
 ```
-https://your-deployed-backend-url.com
+https://ecommerce-backend-zokx.onrender.com
 ```
 All endpoints are prefixed with /api.
 
