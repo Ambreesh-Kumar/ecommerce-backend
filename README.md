@@ -221,4 +221,4 @@ Focused on building **scalable, real-world backend systems**
 - **Email**: kambreesh0@gmail.com
 
 ## License & Usage
-© 2025 Ambreesh Kumar. All rights reserved.
+© 2026 Ambreesh Kumar. All rights reserved.
